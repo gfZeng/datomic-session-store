@@ -7,7 +7,7 @@
 (defrecord DatomicStore [conn opts]
   SessionStore
   (read-session [_ key]
-    ((:< opts)
+    ((or (:< opts) :session/value)
      (let [s (d/pull (db conn) [:*] [:session/key key])
            s-value (:session/value s)]
        (assoc s :session/value
@@ -18,7 +18,7 @@
     (let [key (or key (str (java.util.UUID/randomUUID)))]
       @(d/transact
         conn
-        [(-> ((:> opts) value)
+        [(-> ((or (:> opts) #(array-map :session/value %)) value)
              (assoc :db/id (d/tempid :ring/session))
              (assoc :session/key key)
              (update :session/value nippy/freeze))])
@@ -47,3 +47,12 @@
                       :db/noHistory          true
                       :db.install/_attribute :db.part/db}])
   (DatomicStore. conn opts))
+
+(defn noir< [s]
+  (update (:session/value s)
+          :noir assoc :user (:session/user s)))
+
+(defn noir> [s]
+  (cond-> {:session/value s}
+    (-> s :noir :user)
+    (assoc :session/user (get-in s [:noir :user :db/id]))))

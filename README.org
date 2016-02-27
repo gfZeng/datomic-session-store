@@ -1,0 +1,52 @@
+#+TITLE: ring session store for Datomic
+
+
+* Get Started
+
+** with ring
+#+begin_src clojure
+  (require '[ring.session.store.datomic :refer (datomic-store)])
+
+  (def app
+    (wrap-session handler {:store (datomic-store datomic-conn)}))
+#+end_src
+
+** If your using noir
+
+#+begin_src clojure
+  (require '[ring.session.store.datomic :refer (datomic-store noir< noir>)])
+
+  (app-handler [app]
+               :session-options {:store (datomic-store @conn :< noir< :> noir>)})
+#+end_src
+
+** Find a user all sessions
+#+begin_src clojure
+  (:session/_user user-entity)
+#+end_src
+
+
+* Session schema
+
+#+begin_src clojure
+  {:db/id                 (d/tempid :db.part/db)
+   :db/ident              :ring/session
+   :db.install/_partition :db.part/db}
+  {:db/id                 (d/tempid :db.part/db)
+   :db/ident              :session/key
+   :db/valueType          :db.type/string
+   :db/unique             :db.unique/identity
+   :db/cardinality        :db.cardinality/one
+   :db.install/_attribute :db.part/db}
+  {:db/id                 (d/tempid :db.part/db)
+   :db/ident              :session/user
+   :db/valueType          :db.type/ref
+   :db/cardinality        :db.cardinality/one
+   :db.install/_attribute :db.part/db}
+  {:db/id                 (d/tempid :db.part/db)
+   :db/ident              :session/value
+   :db/valueType          :db.type/bytes
+   :db/cardinality        :db.cardinality/one
+   :db/noHistory          true
+   :db.install/_attribute :db.part/db}
+#+end_src
