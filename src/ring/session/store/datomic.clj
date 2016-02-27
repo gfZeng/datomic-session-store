@@ -4,25 +4,32 @@
             [datomic.api :as d :refer (db)]))
 
 
-(defrecord DatomicStore [conn]
+(defrecord DatomicStore [conn opts]
   SessionStore
   (read-session [_ key]
-    (-> (db conn)
-        (d/entity [:session/key key])
-        :session/value
-        nippy/thaw))
+    ((:< opts)
+     (let [s (d/pull (db conn) [:*] [:session/key key])
+           s-value (:session/value s)]
+       (assoc s :session/value
+              (and s-value (nippy/thaw s-value))))))
   (delete-session [_ key]
     @([[:db.fn/retractEntity [:session/key key]]]))
   (write-session [_ key value]
-    @(d/transact
-      conn
-      [(cond-> {:session/key key
-                :session/value (nippy/freezy value)}
-         (:user value) (assoc :session/user (:user value)))])))
+    (let [key (or key (str (java.util.UUID/randomUUID)))]
+      @(d/transact
+        conn
+        [(-> ((:> opts) value)
+             (assoc :db/id (d/tempid :ring/session))
+             (assoc :session/key key)
+             (update :session/value nippy/freeze))])
+      key)))
 
 
-(defn datomic-session [conn]
+(defn datomic-store [conn & {:as opts}]
   @(d/transact conn [{:db/id                 (d/tempid :db.part/db)
+                      :db/ident              :ring/session
+                      :db.install/_partition :db.part/db}
+                     {:db/id                 (d/tempid :db.part/db)
                       :db/ident              :session/key
                       :db/valueType          :db.type/string
                       :db/unique             :db.unique/identity
@@ -39,4 +46,4 @@
                       :db/cardinality        :db.cardinality/one
                       :db/noHistory          true
                       :db.install/_attribute :db.part/db}])
-  (DatomicStore. conn))
+  (DatomicStore. conn opts))
