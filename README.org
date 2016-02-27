@@ -17,7 +17,7 @@
   (require '[ring.session.store.datomic :refer (datomic-store noir< noir>)])
 
   (app-handler [app]
-               :session-options {:store (datomic-store @conn :< noir< :> noir>)})
+               :session-options {:store (datomic-store datomic-conn :< noir< :> noir>)})
 #+end_src
 
 ** Find a user all sessions
