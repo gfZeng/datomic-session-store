@@ -3,6 +3,13 @@
 
 * Get Started
 
+** Add dependencies
+
+#+begin_src clojure
+  [com.datomic/datomic-pro "0.9.5344"]
+  [datomic-session-store "0.1.0"]
+#+end_src
+
 ** with ring
 #+begin_src clojure
   (require '[ring.session.store.datomic :refer (datomic-store)])
